@@ -30,6 +30,7 @@ import {
   STROKE_WIDTH_KEYS,
   type StrokeWidthKey,
 } from "@excalidraw/common";
+
 import {
   calculateFixedPointForNonElbowArrowBinding,
   getNonDeletedElements,
@@ -70,6 +71,8 @@ import { getNormalizedDimensions } from "@excalidraw/element";
 
 import { isInvisiblySmallElement } from "@excalidraw/element";
 
+import type { FontFamily } from "@excalidraw/common";
+
 import type { LocalPoint, Radians } from "@excalidraw/math";
 
 import type {
@@ -83,7 +86,6 @@ import type {
   ExcalidrawSelectionElement,
   ExcalidrawTextElement,
   FixedPointBinding,
-  FontFamilyValues,
   NonDeleted,
   NonDeletedSceneElementsMap,
   OrderedExcalidrawElement,
@@ -276,12 +278,20 @@ const restoreFreedrawStrokeOptions = (
   };
 };
 
-const getFontFamilyByName = (fontFamilyName: string): FontFamilyValues => {
+const getFontFamilyByName = (fontFamilyName: string): FontFamily => {
   if (Object.keys(FONT_FAMILY).includes(fontFamilyName)) {
     return FONT_FAMILY[
       fontFamilyName as keyof typeof FONT_FAMILY
-    ] as FontFamilyValues;
+    ] as FontFamily;
   }
+
+  // Keep only provider-qualified custom families.
+  // Any other unknown name falls back to the default family for compatibility.
+  const separatorIndex = fontFamilyName.indexOf(":");
+  if (separatorIndex > 0 && separatorIndex < fontFamilyName.length - 1) {
+    return fontFamilyName as FontFamily;
+  }
+
   return DEFAULT_FONT_FAMILY;
 };
 
