@@ -7,6 +7,7 @@ import {
   useEditorInterface,
   ExcalidrawAPIProvider,
   useExcalidrawAPI,
+  ExcalidrawFontFaceDescriptor,
 } from "@excalidraw/excalidraw";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
@@ -31,6 +32,8 @@ import {
   resolvablePromise,
   isRunningInIframe,
   isDevEnv,
+  FONT_METADATA,
+  FONT_FAMILY,
 } from "@excalidraw/common";
 import polyfill from "@excalidraw/excalidraw/polyfill";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -900,6 +903,12 @@ const ExcalidrawWrapper = () => {
     },
   };
 
+  const [customFonts, setCustomFonts] = useState([
+    { value: "Kings", text: "Kings" },
+    { value: "Noto Emoji", text: "Noto Emoji" },
+    { value: "My Soul", text: "My Soul" },
+  ]);
+
   return (
     <div
       style={{ height: "100%" }}
@@ -913,6 +922,94 @@ const ExcalidrawWrapper = () => {
         initialData={initialStatePromiseRef.current.promise}
         isCollaborating={isCollaborating}
         onPointerUpdate={collabAPI?.onPointerUpdate}
+        fontProviders={{
+          google: {
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M12 2a9.96 9.96 0 0 1 6.29 2.226a1 1 0 0 1 .04 1.52l-1.51 1.362a1 1 0 0 1 -1.265 .06a6 6 0 1 0 2.103 6.836l.001 -.004h-3.66a1 1 0 0 1 -.992 -.883l-.007 -.117v-2a1 1 0 0 1 1 -1h6.945a1 1 0 0 1 .994 .89c.04 .367 .061 .737 .061 1.11c0 5.523 -4.477 10 -10 10s-10 -4.477 -10 -10s4.477 -10 10 -10z" />
+              </svg>
+            ),
+            resolve: async (family) => {
+              const cached = localStorage.getItem(`font-cache-${family}`);
+              if (cached) {
+                return JSON.parse(cached);
+              }
+
+              const query = new URLSearchParams();
+              query.append("family", family);
+              query.append("display", "swap");
+
+              const response = await fetch(
+                `https://fonts.googleapis.com/css2?${query.toString()}`,
+              );
+              const css = await response.text();
+
+              const style = new CSSStyleSheet();
+              await style.replace(css);
+
+              const descriptors: ExcalidrawFontFaceDescriptor[] = [];
+
+              for (const rule of style.cssRules) {
+                if (rule instanceof CSSFontFaceRule) {
+                  const src = rule.style.getPropertyValue("src");
+                  const isWoff2 = src.includes(`format("woff2")`);
+                  const uri = src
+                    .match(/url\(([^)]+)\)/)?.[1]
+                    .replace(/['"]/g, "");
+
+                  if (isWoff2 && uri) {
+                    descriptors.push({
+                      uri,
+                      descriptors: {
+                        style:
+                          rule.style.getPropertyValue("font-style") ||
+                          undefined,
+                        weight:
+                          rule.style.getPropertyValue("font-weight") ||
+                          undefined,
+                        unicodeRange:
+                          rule.style.getPropertyValue("unicode-range") ||
+                          undefined,
+                      },
+                    });
+                  }
+                }
+              }
+
+              if (descriptors.length === 0) {
+                throw new Error(
+                  `No valid font faces found for family "${family}"`,
+                );
+              }
+
+              const result = {
+                fontFaces: descriptors,
+                metrics: FONT_METADATA[FONT_FAMILY.Excalifont].metrics,
+              };
+
+              localStorage.setItem(
+                `font-cache-${family}`,
+                JSON.stringify(result),
+              );
+
+              return result;
+            },
+            availableFonts: customFonts,
+            onNewFontUsed: (fontFamily) => {
+              setCustomFonts((prev) => [
+                ...prev,
+                { value: fontFamily, text: fontFamily },
+              ]);
+            },
+          },
+        }}
         UIOptions={{
           canvasActions: {
             toggleTheme: true,
