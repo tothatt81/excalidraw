@@ -497,8 +497,21 @@ export type { ViewportStatusFrame } from "./types";
 
 export { zoomToFitBounds, DEFAULT_OVERSCROLL } from "./viewport";
 
-export type { FontProvider, FontProviders, FontDefinition } from "./types";
-export type { ExcalidrawFontFaceDescriptor } from "./fonts";
+export type { FontProvider, FontProviders } from "./types";
+export type { CustomFontFamily, FontFamily } from "@excalidraw/common";
+export {
+  isCustomFontFamily,
+  isBuiltInFontFamily,
+  isProviderQualifiedFontFamily,
+} from "@excalidraw/common";
+export type {
+  FontDefinition,
+  FontRegistrationResult,
+  FontResolutionStatus,
+  FontResolver,
+  FontResolvers,
+  ExcalidrawFontFaceDescriptor,
+} from "./fonts";
 
 export {
   getCommonBounds,
