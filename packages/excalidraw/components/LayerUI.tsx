@@ -227,7 +227,7 @@ const LayerUI = ({
         onExportImage={onExportImage}
         onCloseRequest={() => setAppState({ openDialog: null })}
         name={app.getName()}
-        fontResolvers={app.fonts.fontResolvers}
+        fontResolvers={app.fonts.instance.fontResolvers}
       />
     );
   };
